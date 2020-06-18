@@ -16,6 +16,7 @@ import {certificateFromString, certificateToString, issue} from "../trust/certif
 import {TrustGraph} from "../trust/trust_graph";
 import {nodeRootCert} from "../trust/misc";
 import {peerIdToSeed, seedToPeerId} from "../seed";
+import Url from "url-parse"
 
 describe("Typescript usage suite", () => {
 
@@ -56,17 +57,18 @@ describe("Typescript usage suite", () => {
         let addr = await createRelayAddress(relayid.toB58String(), pid, true);
 
         let pid2 = await PeerId.create();
-        let addr2 = createPeerAddress(pid.toB58String());
+        let addr2 = createPeerAddress(pid2.toB58String());
 
         let functionCall = makeFunctionCall(
             "123",
-            addr2,
-            addr2,
             {
                 arg1: "123",
                 arg2: 3,
                 arg4: [1, 2, 3]
             },
+            addr2,
+            addr2,
+
             addr,
             "2444"
         );
@@ -79,13 +81,13 @@ describe("Typescript usage suite", () => {
 
         let functionCallWithOptional = makeFunctionCall(
             "123",
-            addr,
-            addr,
             {
                 arg1: "123",
                 arg2: 3,
                 arg4: [1, 2, 3]
-            }
+            },
+            addr,
+            addr
         );
 
         let str2 = callToString(functionCallWithOptional);
@@ -123,10 +125,11 @@ describe("Typescript usage suite", () => {
     });
 
     // delete `.skip` and run `npm run test` to check service's and certificate's api with Fluence nodes
-    it.skip("integration test", async function () {
+    it("integration test", async function () {
         this.timeout(15000);
-        await testCerts();
-        // await testCalculator();
+
+        // await testCerts();
+        await testCalculator();
     });
 });
 
@@ -137,8 +140,8 @@ export async function testCerts() {
     let key2 = await Fluence.generatePeerId();
 
     // connect to two different nodes
-    let cl1 = await Fluence.connect("/dns4/104.248.25.59/tcp/9003/ws/p2p/12D3KooWBUJifCTgaxAUrcM9JysqCcS4CS8tiYH5hExbdWCAoNwb", key1);
-    let cl2 = await Fluence.connect("/ip4/104.248.25.59/tcp/9002/ws/p2p/12D3KooWHk9BjDQBUqnavciRPhAYFvqKBe4ZiPPvde7vDaqgn5er", key2);
+    let cl1 = await Fluence.connect("/dns4/134.209.186.43/tcp/9003/ws/p2p/12D3KooWBUJifCTgaxAUrcM9JysqCcS4CS8tiYH5hExbdWCAoNwb", key1);
+    let cl2 = await Fluence.connect("/ip4/134.209.186.43/tcp/9002/ws/p2p/12D3KooWHk9BjDQBUqnavciRPhAYFvqKBe4ZiPPvde7vDaqgn5er", key2);
 
     let trustGraph1 = new TrustGraph(cl1);
     let trustGraph2 = new TrustGraph(cl2);
@@ -172,8 +175,8 @@ export async function testCalculator() {
     let key2 = await Fluence.generatePeerId();
 
     // connect to two different nodes
-    let cl1 = await Fluence.connect("/dns4/104.248.25.59/tcp/9003/ws/p2p/12D3KooWBUJifCTgaxAUrcM9JysqCcS4CS8tiYH5hExbdWCAoNwb", key1);
-    let cl2 = await Fluence.connect("/ip4/104.248.25.59/tcp/9002/ws/p2p/12D3KooWHk9BjDQBUqnavciRPhAYFvqKBe4ZiPPvde7vDaqgn5er", key2);
+    let cl1 = await Fluence.connect("/dns4/134.209.186.43/tcp/9003/ws/p2p/12D3KooWBUJifCTgaxAUrcM9JysqCcS4CS8tiYH5hExbdWCAoNwb", key1);
+    let cl2 = await Fluence.connect("/ip4/134.209.186.43/tcp/9002/ws/p2p/12D3KooWHk9BjDQBUqnavciRPhAYFvqKBe4ZiPPvde7vDaqgn5er", key2);
 
     // service name that we will register with one connection and call with another
     let serviceId = "sum-calculator-" + genUUID();
@@ -189,6 +192,8 @@ export async function testCalculator() {
 
         await cl1.sendCall(req.reply_to, message);
     });
+
+    delay(3000);
 
 
     // msgId is to identify response

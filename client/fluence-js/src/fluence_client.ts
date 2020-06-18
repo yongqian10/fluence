@@ -42,7 +42,7 @@ export class FluenceClient {
      * Makes call with response from function. Without reply_to field.
      */
     private responseCall(target: Address, args: any): FunctionCall {
-        return makeFunctionCall(genUUID(), target, this.connection.sender, args, undefined, "response");
+        return makeFunctionCall(genUUID(), args, target, this.connection.sender, undefined, "response");
     }
 
     /**
@@ -108,6 +108,21 @@ export class FluenceClient {
     }
 
     /**
+     * Send a call to the the service located on the node that the client connected with.
+     *
+     * @param serviceId
+     * @param args message to the service
+     * @param name common field for debug purposes
+     */
+    async sendServiceLocalCall(serviceId: string, args: any, name?: string) {
+        if (this.connection && this.connection.isConnected()) {
+            await this.connection.sendServiceLocalCall(serviceId, args, name);
+        } else {
+            throw Error("client is not connected")
+        }
+    }
+
+    /**
      * Send call to the service and wait a response matches predicate.
      *
      * @param serviceId
@@ -116,6 +131,18 @@ export class FluenceClient {
      */
     async sendServiceCallWaitResponse(serviceId: string, args: any, predicate: (args: any, target: Address, replyTo: Address) => (boolean | undefined)): Promise<any> {
         await this.sendServiceCall(serviceId, args);
+        return await this.waitResponse(predicate);
+    }
+
+    /**
+     * Send a call to the the service located on the node that the client connected with and wait a response matches predicate.
+     *
+     * @param serviceId
+     * @param args message to the service
+     * @param predicate will be applied to each incoming call until it matches
+     */
+    async sendServiceLocalCallWaitResponse(serviceId: string, args: any, predicate: (args: any, target: Address, replyTo: Address) => (boolean | undefined)): Promise<any> {
+        await this.sendServiceLocalCall(serviceId, args);
         return await this.waitResponse(predicate);
     }
 
@@ -146,51 +173,56 @@ export class FluenceClient {
             // call all subscriptions for a new call
             _this.subscriptions.applyToSubscriptions(call);
 
-            switch (lastProtocol.protocol) {
-                case ProtocolType.Service:
-                    try {
-                        // call of the service, service should handle response sending, error handling, requests to other services
-                        let applied = _this.services.applyToService(lastProtocol.value, call);
+            if (target.service) {
+                try {
+                    // call of the service, service should handle response sending, error handling, requests to other services
+                    let applied = _this.services.applyToService(target.service, call);
 
-                        // if the request hasn't been applied, there is no such service. Return an error.
-                        if (!applied) {
-                            console.log(`there is no service ${lastProtocol.value}`);
+                    // if the request hasn't been applied, there is no such service. Return an error.
+                    if (!applied) {
+                        console.log(`there is no service ${target.service}`);
+                        return this.responseCall(call.reply_to, {
+                            reason: `there is no such service`,
+                            msg: call
+                        });
+                    }
+                } catch (e) {
+                    // if service throw an error, return it to the sender
+                    return this.responseCall(call.reply_to, {
+                        reason: `error on execution: ${e}`,
+                        msg: call
+                    });
+                }
+
+                return undefined;
+            } else {
+                switch (lastProtocol.protocol) {
+                    case ProtocolType.Providers:
+                        console.log(`Unexpected. Client shouldn't get 'providers' protocol`);
+                        return undefined;
+                    case ProtocolType.Client:
+                        if (lastProtocol.value === _this.selfPeerIdStr) {
+                            console.log(`relay call: ${call}`);
+                        } else {
+                            console.warn(`this relay call is not for me: ${callToString(call)}`);
                             return this.responseCall(call.reply_to, {
-                                reason: `there is no such service`,
+                                reason: `this relay call is not for me`,
                                 msg: call
                             });
                         }
-                    } catch (e) {
-                        // if service throw an error, return it to the sender
-                        return this.responseCall(call.reply_to, {
-                            reason: `error on execution: ${e}`,
-                            msg: call
-                        });
-                    }
-
-                    return undefined;
-                case ProtocolType.Client:
-                    if (lastProtocol.value === _this.selfPeerIdStr) {
-                        console.log(`relay call: ${call}`);
-                    } else {
-                        console.warn(`this relay call is not for me: ${callToString(call)}`);
-                        return this.responseCall(call.reply_to, {
-                            reason: `this relay call is not for me`,
-                            msg: call
-                        });
-                    }
-                    return undefined;
-                case ProtocolType.Peer:
-                    if (lastProtocol.value === this.selfPeerIdStr) {
-                        console.log(`peer call: ${call}`);
-                    } else {
-                        console.warn(`this peer call is not for me: ${callToString(call)}`);
-                        return this.responseCall(call.reply_to, {
-                            reason: `this relay call is not for me`,
-                            msg: call
-                        });
-                    }
-                    return undefined;
+                        return undefined;
+                    case ProtocolType.Peer:
+                        if (lastProtocol.value === this.selfPeerIdStr) {
+                            console.log(`peer call: ${call}`);
+                        } else {
+                            console.warn(`this peer call is not for me: ${callToString(call)}`);
+                            return this.responseCall(call.reply_to, {
+                                reason: `this relay call is not for me`,
+                                msg: call
+                            });
+                        }
+                        return undefined;
+                }
             }
         }
     }
@@ -250,8 +282,8 @@ export class FluenceClient {
         }
 
         let peerId = PeerId.createFromB58String(nodePeerId);
-        let relayAddress = await createRelayAddress(nodePeerId, this.selfPeerInfo.id, true);
-        let connection = new FluenceConnection(multiaddr, peerId, this.selfPeerInfo, relayAddress, this.handleCall());
+        let sender = await createRelayAddress(nodePeerId, this.selfPeerInfo.id, true);
+        let connection = new FluenceConnection(multiaddr, peerId, this.selfPeerInfo, sender, this.handleCall());
 
         await connection.connect();
 

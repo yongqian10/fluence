@@ -26,9 +26,11 @@
     "libp2p-secio": "0.12.5",
     "libp2p-websockets": "0.13.6",
     "peer-id": "0.13.12",
-    "peer-info": "0.17.5"
+    "peer-info": "0.17.5",
+    "url-parse": "1.4.7"
   },
   "devDependencies": {
+    "@types/url-parse": "1.4.3",
     "@types/base64-js": "1.2.5",
     "@types/bs58": "4.0.1",
     "@types/chai": "4.2.11",

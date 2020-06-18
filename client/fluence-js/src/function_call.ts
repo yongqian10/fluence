@@ -18,7 +18,7 @@ import {
     createPeerAddress,
     createRelayAddress,
     createServiceAddress,
-    Address, addressToString, parseAddress
+    Address, addressToString, parseAddress, createLocalAddress
 } from "./address";
 import * as PeerId from "peer-id";
 
@@ -40,11 +40,12 @@ export function callToString(call: FunctionCall) {
     }
 
     obj.target = addressToString(obj.target);
+    obj.sender = addressToString(obj.sender);
 
     return JSON.stringify(obj)
 }
 
-export function makeFunctionCall(uuid: string, target: Address, sender: Address, args: object, replyTo?: Address, name?: string): FunctionCall {
+export function makeFunctionCall(uuid: string, args: object, target: Address, sender: Address, replyTo?: Address, name?: string): FunctionCall {
 
     return {
         uuid: uuid,
@@ -69,7 +70,9 @@ export function parseFunctionCall(str: string): FunctionCall {
     if (!json.sender) throw Error(`there is no 'sender' field in json.\n${str}`);
 
     let target = parseAddress(json.target);
+    console.log("sender: ")
     let sender = parseAddress(json.sender);
+    console.dir(sender)
 
     return {
         uuid: json.uuid,
@@ -93,7 +96,7 @@ export function genUUID() {
 export async function makeRelayCall(client: PeerId, relay: PeerId, msg: any, sender: Address, replyTo?: Address, name?: string): Promise<FunctionCall> {
     let relayAddress = await createRelayAddress(relay.toB58String(), client, false);
 
-    return makeFunctionCall(genUUID(), relayAddress, sender, msg, replyTo, name);
+    return makeFunctionCall(genUUID(), msg, relayAddress, sender, replyTo, name);
 }
 
 /**
@@ -102,7 +105,7 @@ export async function makeRelayCall(client: PeerId, relay: PeerId, msg: any, sen
 export function makePeerCall(client: PeerId, msg: any, sender: Address, replyTo?: Address, name?: string): FunctionCall {
     let peerAddress = createPeerAddress(client.toB58String());
 
-    return makeFunctionCall(genUUID(), peerAddress, msg, sender, replyTo, name);
+    return makeFunctionCall(genUUID(), msg, peerAddress, sender, replyTo, name);
 }
 
 /**
@@ -111,17 +114,25 @@ export function makePeerCall(client: PeerId, msg: any, sender: Address, replyTo?
 export function makeCall(functionId: string, args: any, sender: Address, replyTo?: Address, name?: string): FunctionCall {
     let target = createServiceAddress(functionId);
 
-    return makeFunctionCall(genUUID(), target, args, sender, replyTo, name);
+    return makeFunctionCall(genUUID(), args, target, sender, replyTo, name);
+}
+
+/**
+ * Message to call remote service_id
+ */
+export function makeLocalCall(functionId: string, args: any, sender: Address, replyTo?: Address, name?: string): FunctionCall {
+    let target = createLocalAddress(functionId);
+
+    return makeFunctionCall(genUUID(), args, target, sender, replyTo, name);
 }
 
 /**
  * Message to register new service_id.
  */
 export async function makeRegisterMessage(serviceId: string, relayPeerId: PeerId, selfPeerId: PeerId): Promise<FunctionCall> {
-    let target = createServiceAddress("provide");
     let replyTo = await createRelayAddress(relayPeerId.toB58String(), selfPeerId, true);
 
-    return makeFunctionCall(genUUID(), target, replyTo, {service_id: serviceId}, replyTo, "provide service_id");
+    return makeLocalCall("provide", {service_id: serviceId}, replyTo, replyTo, "provide service_id");
 }
 
 // TODO uncomment when this will be implemented in Fluence network

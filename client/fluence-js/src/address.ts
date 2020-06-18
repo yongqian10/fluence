@@ -16,8 +16,10 @@
 
 import * as PeerId from "peer-id";
 import {encode} from "bs58"
+import Url from "url-parse"
 
 export interface Address {
+    service: string | undefined,
     protocols: Protocol[]
 }
 
@@ -27,7 +29,7 @@ export interface Protocol {
 }
 
 export enum ProtocolType {
-    Service = "service",
+    Providers = "providers",
     Peer = "peer",
     Signature = "signature",
     Client = "client"
@@ -36,16 +38,26 @@ export enum ProtocolType {
 const PROTOCOL = "fluence:";
 
 export function addressToString(address: Address): string {
-    let addressStr = PROTOCOL;
 
+    let url = new Url("fluence:/");
+
+    let path = "";
     for (let addr of address.protocols) {
-        addressStr = addressStr + "/" + addr.protocol;
+        path = path + "/" + addr.protocol;
         if (addr.value) {
-            addressStr = addressStr + "/" + addr.value;
+            path = path + "/" + addr.value;
         }
     }
 
-    return addressStr;
+    if (path) {
+        url.set("pathname", path);
+    }
+
+    if (address.service) {
+        url.set("hash", address.service);
+    }
+
+    return url.toString();
 }
 
 function protocolWithValue(protocol: ProtocolType, protocolIterator: IterableIterator<[number, string]>): Protocol {
@@ -64,7 +76,7 @@ export function parseProtocol(protocol: string, protocolIterator: IterableIterat
     protocol = protocol.toLocaleLowerCase();
 
     switch (protocol) {
-        case ProtocolType.Service:
+        case ProtocolType.Providers:
             return protocolWithValue(protocol, protocolIterator);
         case ProtocolType.Client:
             return protocolWithValue(protocol, protocolIterator);
@@ -73,7 +85,7 @@ export function parseProtocol(protocol: string, protocolIterator: IterableIterat
         case ProtocolType.Signature:
             return protocolWithValue(protocol, protocolIterator);
         default:
-            throw Error("cannot parse protocol. Should be 'service|peer|client|signature'");
+            throw Error(`cannot parse protocol '${protocol}'. Should be 'peer|client|signature'`);
     }
 
 }
@@ -86,7 +98,7 @@ export async function createRelayAddress(relay: string, peerId: PeerId, withSig:
     ];
 
     if (withSig) {
-        let str = addressToString({protocols: protocols}).replace(PROTOCOL, "");
+        let str = addressToString({service: undefined, protocols: protocols}).replace(PROTOCOL, "");
         let signature = await peerId.privKey.sign(Buffer.from(str));
         let signatureStr = encode(signature);
 
@@ -94,15 +106,32 @@ export async function createRelayAddress(relay: string, peerId: PeerId, withSig:
     }
 
     return {
+        service: undefined,
+        protocols: protocols
+    }
+}
+
+export function createLocalAddress(service: string, address?: Address): Address {
+
+    let protocols: Protocol[];
+    if (address) {
+        protocols = address.protocols
+    } else {
+        protocols = [];
+    }
+
+    return {
+        service: service,
         protocols: protocols
     }
 }
 
 export function createServiceAddress(service: string): Address {
 
-    let protocol = {protocol: ProtocolType.Service, value: service};
+    let protocol = {protocol: ProtocolType.Providers, value: service};
 
     return {
+        service: undefined,
         protocols: [protocol]
     }
 }
@@ -111,17 +140,25 @@ export function createPeerAddress(peer: string): Address {
     let protocol = {protocol: ProtocolType.Peer, value: peer};
 
     return {
+        service: undefined,
         protocols: [protocol]
     }
 }
 
 export function parseAddress(str: string): Address {
-    str = str.replace("fluence:", "");
+
+    let url = new Url(str);
+    let service;
+    if (url.hash) {
+        service = url.hash;
+    }
+
+    let path = url.pathname;
 
     // delete leading slashes
-    str = str.replace(/^\/+/, '');
+    path = path.replace(/^\/+/, '');
 
-    let parts = str.split("/");
+    let parts = path.split("/");
     if (parts.length < 1) {
         throw Error("address parts should not be empty")
     }
@@ -137,6 +174,7 @@ export function parseAddress(str: string): Address {
     }
 
     return {
+        service: service,
         protocols: protocols
     }
 }

@@ -20,7 +20,7 @@ import {
     FunctionCall,
     genUUID,
     makeCall,
-    makeFunctionCall,
+    makeFunctionCall, makeLocalCall,
     makePeerCall,
     makeRegisterMessage,
     makeRelayCall,
@@ -54,13 +54,13 @@ export class FluenceConnection {
     private readonly selfPeerId: string;
     private readonly handleCall: (call: FunctionCall) => FunctionCall | undefined;
 
-    constructor(multiaddr: Multiaddr, hostPeerId: PeerId, selfPeerInfo: PeerInfo, replyToAddress: Address, handleCall: (call: FunctionCall) => FunctionCall | undefined) {
+    constructor(multiaddr: Multiaddr, hostPeerId: PeerId, selfPeerInfo: PeerInfo, sender: Address, handleCall: (call: FunctionCall) => FunctionCall | undefined) {
         this.selfPeerInfo = selfPeerInfo;
         this.handleCall = handleCall;
         this.selfPeerId = selfPeerInfo.id.toB58String();
         this.address = multiaddr;
         this.nodePeerId = hostPeerId;
-        this.sender = replyToAddress
+        this.sender = sender
     }
 
     async connect() {
@@ -91,6 +91,14 @@ export class FluenceConnection {
      */
     async sendServiceCall(serviceId: string, args: any, name?: string) {
         let regMsg = makeCall(serviceId, args, this.sender, this.sender, name);
+        await this.sendCall(regMsg);
+    }
+
+    /**
+     * Sends local service_id a call on the node that the client connected with.
+     */
+    async sendServiceLocalCall(serviceId: string, args: any, name?: string) {
+        let regMsg = makeLocalCall(serviceId, args, this.sender, this.sender, name);
         await this.sendCall(regMsg);
     }
 
@@ -186,7 +194,7 @@ export class FluenceConnection {
         let replyTo;
         if (reply) replyTo = this.sender;
 
-        let call = makeFunctionCall(genUUID(), target, args, this.sender, replyTo, name);
+        let call = makeFunctionCall(genUUID(), args, target, this.sender, replyTo, name);
 
         await this.sendCall(call);
     }

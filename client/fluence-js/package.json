@@ -27,7 +27,8 @@
     "libp2p-secio": "0.12.5",
     "libp2p-websockets": "0.13.6",
     "peer-id": "0.13.12",
-    "uuid": "8.3.0"
+    "uuid": "8.3.0",
+    "p-queue": "6.6.1"
   },
   "devDependencies": {
     "@types/base64-js": "1.2.5",

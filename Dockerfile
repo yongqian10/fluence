@@ -4,7 +4,7 @@ ARG exe=
 ARG config=
 ARG air_interpreter=
 
-RUN echo -e 'deb http://deb.debian.org/debian buster-backports main\n' >> /etc/apt/sources.list
+RUN echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
 RUN apt-get update
 RUN apt-get install -t buster-backports install -y linux-perf linux-base
 

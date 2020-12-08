@@ -56,6 +56,8 @@ jobs:
 
       - name: Build particle-server
         uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: '-C force-frame-pointers=y'
         with:
           toolchain: nightly
           command: build

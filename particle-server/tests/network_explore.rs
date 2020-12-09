@@ -19,6 +19,7 @@ use test_utils::{
 };
 
 use futures::executor::block_on;
+use libp2p::core::Multiaddr;
 use maplit::hashmap;
 use serde::Deserialize;
 use serde_json::json;
@@ -147,10 +148,23 @@ fn get_blueprints() {
 fn explore_services() {
     enable_logs();
 
-    let swarms = make_swarms(20);
-    sleep(KAD_TIMEOUT);
+    let nodes: Vec<Multiaddr> = vec![
+        "/ip4/157.230.110.111/tcp/7001".parse().unwrap(), // /ip4/157.230.110.111/tcp/9001/ws 12D3KooWEXNUbCXooUwHrHBbrmjsrpHXoEphPwbjQXEGyzbqKnE9
+        "/ip4/157.230.110.111/tcp/7002".parse().unwrap(), // /ip4/157.230.110.111/tcp/9002/ws 12D3KooWHk9BjDQBUqnavciRPhAYFvqKBe4ZiPPvde7vDaqgn5er
+        "/ip4/157.230.110.111/tcp/7003".parse().unwrap(), // /ip4/157.230.110.111/tcp/9003/ws 12D3KooWBUJifCTgaxAUrcM9JysqCcS4CS8tiYH5hExbdWCAoNwb
+        "/ip4/157.230.110.111/tcp/7004".parse().unwrap(), // /ip4/157.230.110.111/tcp/9004/ws 12D3KooWJbJFaZ3k5sNd8DjQgg3aERoKtBAnirEvPV8yp76kEXHB
+        "/ip4/157.230.110.111/tcp/7005".parse().unwrap(), // /ip4/157.230.110.111/tcp/9005/ws 12D3KooWCKCeqLPSgMnDjyFsJuWqREDtKNHx1JEBiwaMXhCLNTRb
+        "/ip4/157.230.110.111/tcp/7006".parse().unwrap(), // /ip4/157.230.110.111/tcp/9006/ws 12D3KooWKnRcsTpYx9axkJ6d69LPfpPXrkVLe96skuPTAo76LLVH
+        "/ip4/157.230.110.111/tcp/7007".parse().unwrap(), // /ip4/157.230.110.111/tcp/9007/ws 12D3KooWBSdm6TkqnEFrgBuSkpVE3dR1kr6952DsWQRNwJZjFZBv
+        "/ip4/157.230.110.111/tcp/7008".parse().unwrap(), // /ip4/157.230.110.111/tcp/9008/ws 12D3KooWGzNvhSDsgFoHwpWHAyPf1kcTYCGeRBPfznL8J6qdyu2H
+        "/ip4/157.230.110.111/tcp/7009".parse().unwrap(), // /ip4/157.230.110.111/tcp/9009/ws 12D3KooWF7gjXhQ4LaKj6j7ntxsPpGk34psdQicN2KNfBi9bFKXg
+        "/ip4/157.230.110.111/tcp/7770".parse().unwrap(), // /ip4/157.230.110.111/tcp/9990/ws 12D3KooWMhVpgfQxBLkQkJed8VFNvgN4iE6MD7xCybb1ZYWW2Gtz
+    ];
 
-    let mut client = ConnectedClient::connect_to(swarms[0].1.clone()).expect("connect client");
+    // let swarms = make_swarms(20);
+    // sleep(KAD_TIMEOUT);
+
+    let mut client = ConnectedClient::connect_to(nodes[0].clone()).expect("connect client");
     client.send_particle(
         r#"
         (seq

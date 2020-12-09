@@ -13,7 +13,7 @@
       "206.81.30.129",
       "159.89.2.70"
     ],
-    "branch": "aquamarine_patch",
+    "branch": "ci_cargo_update",
     "bootstrap": "165.227.164.206",
     "nodes": [
       "165.227.164.206",

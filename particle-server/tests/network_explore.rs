@@ -238,7 +238,7 @@ fn explore_services_fixed() {
     client.send_particle(script, data);
 
     let now = Instant::now();
-    let tout = Duration::from_secs(10);
+    let tout = Duration::from_secs(20);
     let mut received = Vec::new();
 
     loop {
